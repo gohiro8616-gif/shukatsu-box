@@ -1,5 +1,5 @@
 import { Mail, ExternalLink } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/safe-auth";
 import { EmailFilters } from "@/components/email/email-filters";
 
 export default async function EmailsPage({
@@ -8,32 +8,33 @@ export default async function EmailsPage({
   searchParams: Promise<{ q?: string; read?: string; category?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getUser();
 
-  let query = supabase
-    .from("emails")
-    .select("id, subject, from_name, from_address, snippet, received_at, is_read, ai_category, gmail_link, company_id")
-    .eq("user_id", user!.id)
-    .order("received_at", { ascending: false })
-    .limit(50);
+  let emails: any[] | null = null;
 
-  // フィルター適用
-  if (params.read === "unread") query = query.eq("is_read", false);
-  if (params.read === "read") query = query.eq("is_read", true);
-  if (params.category && params.category !== "all") {
-    query = query.eq("ai_category", params.category);
+  if (user) {
+    let query = supabase
+      .from("emails")
+      .select("id, subject, from_name, from_address, snippet, received_at, is_read, ai_category, gmail_link, company_id")
+      .eq("user_id", user.id)
+      .order("received_at", { ascending: false })
+      .limit(50);
+
+    if (params.read === "unread") query = query.eq("is_read", false);
+    if (params.read === "read") query = query.eq("is_read", true);
+    if (params.category && params.category !== "all") {
+      query = query.eq("ai_category", params.category);
+    }
+    if (params.q) {
+      query = query.or(
+        `subject.ilike.%${params.q}%,from_name.ilike.%${params.q}%,from_address.ilike.%${params.q}%`
+      );
+    }
+
+    const result = await query;
+    emails = result.data;
   }
-  if (params.q) {
-    query = query.or(
-      `subject.ilike.%${params.q}%,from_name.ilike.%${params.q}%,from_address.ilike.%${params.q}%`
-    );
-  }
-
-  const { data: emails } = await query;
-  const hasEmails = emails && emails.length > 0;
+  const hasEmails = !!emails && emails.length > 0;
 
   const categoryColors: Record<string, string> = {
     選考関連: "bg-blue-100 text-blue-700",
@@ -57,7 +58,7 @@ export default async function EmailsPage({
 
       {hasEmails ? (
         <div className="divide-y divide-gray-100 rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
-          {emails.map((email) => (
+          {emails!.map((email) => (
             <div
               key={email.id}
               className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50"
@@ -119,7 +120,7 @@ export default async function EmailsPage({
           <p className="mt-4 text-sm font-medium text-gray-500">
             メールがまだありません
           </p>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-gray-500">
             ダッシュボードの「メール取得 & AI分析」ボタンを押してください
           </p>
         </div>

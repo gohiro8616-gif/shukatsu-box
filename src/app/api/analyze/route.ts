@@ -73,15 +73,26 @@ export async function POST() {
     if (analysis.companyName) {
       const domain = email.from_address.split("@")[1] ?? null;
 
-      // 同じ企業名またはドメインの企業が既にあるか確認
-      const { data: existing } = await supabase
-        .from("companies")
-        .select("id")
-        .eq("user_id", user.id)
-        .or(`name.eq.${analysis.companyName},email_domain.eq.${domain}`)
-        .limit(1);
+      // 同じ企業名またはドメインの企業が既にあるか確認（個別フィルタで安全に検索）
+      const [byName, byDomain] = await Promise.all([
+        supabase
+          .from("companies")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("name", analysis.companyName)
+          .limit(1),
+        domain
+          ? supabase
+              .from("companies")
+              .select("id")
+              .eq("user_id", user.id)
+              .eq("email_domain", domain)
+              .limit(1)
+          : { data: [] },
+      ]);
+      const existing = [...(byName.data ?? []), ...(byDomain.data ?? [])];
 
-      if (!existing || existing.length === 0) {
+      if (existing.length === 0) {
         // 新しい企業を登録
         const { data: newCompany } = await supabase
           .from("companies")

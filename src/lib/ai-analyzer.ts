@@ -21,6 +21,10 @@ export type EmailCategory =
   | "事務連絡"        // マイページ登録完了・パスワード変更等
   | "その他";         // 上記に当てはまらないもの
 
+const VALID_CATEGORIES: EmailCategory[] = [
+  "選考関連", "説明会・セミナー", "内定・オファー", "スカウト", "事務連絡", "その他",
+];
+
 /**
  * Claude AIを使ってメールの内容を分析する
  * 1通ずつ分析するのではなく、複数メールをまとめて送ることで効率化
@@ -80,9 +84,12 @@ ${emailList}`,
     results.forEach((result, index) => {
       const emailId = result.id ?? emails[index]?.id;
       if (emailId) {
+        const validCategory = VALID_CATEGORIES.includes(result.category)
+          ? result.category
+          : "その他";
         map.set(emailId, {
           companyName: result.companyName,
-          category: result.category,
+          category: validCategory,
           detectedDeadline: result.detectedDeadline,
           suggestedStatus: result.suggestedStatus,
         });

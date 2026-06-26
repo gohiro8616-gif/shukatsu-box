@@ -7,22 +7,21 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/safe-auth";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { SyncButton } from "@/components/dashboard/sync-button";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getUser();
 
   // ステータス別の企業数を取得
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("id, status, deadline, name")
-    .eq("user_id", user!.id);
+  const { data: companies } = user
+    ? await supabase
+        .from("companies")
+        .select("id, status, deadline, name")
+        .eq("user_id", user.id)
+    : { data: null };
 
   const statusCounts = {
     応募中: 0,
@@ -69,12 +68,14 @@ export default async function DashboardPage() {
     );
 
   // 最新メール5件
-  const { data: recentEmails } = await supabase
-    .from("emails")
-    .select("id, subject, from_name, from_address, received_at, is_read, gmail_link")
-    .eq("user_id", user!.id)
-    .order("received_at", { ascending: false })
-    .limit(5);
+  const { data: recentEmails } = user
+    ? await supabase
+        .from("emails")
+        .select("id, subject, from_name, from_address, received_at, is_read, gmail_link")
+        .eq("user_id", user.id)
+        .order("received_at", { ascending: false })
+        .limit(5)
+    : { data: null };
 
   const hasEmails = recentEmails && recentEmails.length > 0;
 
@@ -95,7 +96,7 @@ export default async function DashboardPage() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
+            className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-shadow hover:shadow-md"
           >
             <div className="flex items-center gap-2">
               <div className={`h-2.5 w-2.5 rounded-full ${stat.color}`} />
@@ -140,7 +141,7 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-500">
                 締切が近い企業はまだありません。
                 <br />
                 メールを取得すると、AIが自動で返信期限を検出します。
@@ -201,7 +202,7 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-500">
                 まだメールを取得していません。
                 <br />
                 「メール取得 & AI分析」ボタンを押してください。

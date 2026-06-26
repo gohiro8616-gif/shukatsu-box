@@ -8,7 +8,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
       {/* lg:ml-64 → PCではサイドバーの幅分だけ右にずらす */}
       <main className="lg:ml-64">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 pt-16 pb-6 sm:px-6 lg:px-8 lg:pt-6">
           {children}
         </div>
       </main>

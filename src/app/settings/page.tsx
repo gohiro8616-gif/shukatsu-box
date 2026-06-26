@@ -1,8 +1,11 @@
 "use client";
 
 import { Shield, Bell, Tag, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 export default function SettingsPage() {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
   return (
     <div className="space-y-6">
       <div>
@@ -94,9 +97,44 @@ export default function SettingsPage() {
           アカウントを削除すると、すべてのデータが完全に消去されます。この操作は元に戻せません。
         </p>
         <div className="mt-4">
-          <button className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-            アカウントを削除
-          </button>
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            >
+              アカウントを削除
+            </button>
+          ) : (
+            <div className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-medium text-red-800">
+                本当に削除しますか？確認のため「削除」と入力してください。
+              </p>
+              <input
+                type="text"
+                value={deleteInput}
+                onChange={(e) => setDeleteInput(e.target.value)}
+                placeholder="削除"
+                className="w-full rounded-lg border border-red-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              />
+              <div className="flex gap-2">
+                <button
+                  disabled={deleteInput !== "削除"}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-40"
+                >
+                  完全に削除する
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteInput("");
+                  }}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>

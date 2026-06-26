@@ -8,6 +8,11 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  if (supabaseUrl.includes("placeholder") || !supabaseUrl.startsWith("https://")) {
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,19 +34,24 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  // 未ログインの場合、ログインページ（トップ）へリダイレクト
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    request.nextUrl.pathname !== "/"
-  ) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+    // 未ログインの場合、ログインページ（トップ）へリダイレクト
+    if (
+      !user &&
+      !request.nextUrl.pathname.startsWith("/auth") &&
+      request.nextUrl.pathname !== "/"
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+  } catch {
+    // Supabase未接続時（開発プレビュー等）はそのまま通す
+    return supabaseResponse;
   }
 
   return supabaseResponse;
