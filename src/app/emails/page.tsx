@@ -1,6 +1,49 @@
-import { Mail, Search, Filter } from "lucide-react";
+import { Mail, ExternalLink } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { EmailFilters } from "@/components/email/email-filters";
 
-export default function EmailsPage() {
+export default async function EmailsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; read?: string; category?: string }>;
+}) {
+  const params = await searchParams;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let query = supabase
+    .from("emails")
+    .select("id, subject, from_name, from_address, snippet, received_at, is_read, ai_category, gmail_link, company_id")
+    .eq("user_id", user!.id)
+    .order("received_at", { ascending: false })
+    .limit(50);
+
+  // フィルター適用
+  if (params.read === "unread") query = query.eq("is_read", false);
+  if (params.read === "read") query = query.eq("is_read", true);
+  if (params.category && params.category !== "all") {
+    query = query.eq("ai_category", params.category);
+  }
+  if (params.q) {
+    query = query.or(
+      `subject.ilike.%${params.q}%,from_name.ilike.%${params.q}%,from_address.ilike.%${params.q}%`
+    );
+  }
+
+  const { data: emails } = await query;
+  const hasEmails = emails && emails.length > 0;
+
+  const categoryColors: Record<string, string> = {
+    選考関連: "bg-blue-100 text-blue-700",
+    "説明会・セミナー": "bg-purple-100 text-purple-700",
+    "内定・オファー": "bg-green-100 text-green-700",
+    スカウト: "bg-yellow-100 text-yellow-700",
+    事務連絡: "bg-gray-100 text-gray-700",
+    その他: "bg-gray-100 text-gray-500",
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -10,42 +53,77 @@ export default function EmailsPage() {
         </p>
       </div>
 
-      {/* 検索・フィルターバー */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="企業名・キーワードで検索..."
-            className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-        <div className="flex gap-2">
-          <select className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-            <option value="all">すべて</option>
-            <option value="unread">未読のみ</option>
-            <option value="read">既読のみ</option>
-          </select>
-          <select className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-            <option value="all">全カテゴリ</option>
-            <option value="selection">選考関連</option>
-            <option value="seminar">説明会・セミナー</option>
-            <option value="offer">内定・オファー</option>
-            <option value="other">その他</option>
-          </select>
-        </div>
-      </div>
+      <EmailFilters />
 
-      {/* メールリスト（空状態） */}
-      <div className="flex flex-col items-center justify-center rounded-xl bg-white py-16 shadow-sm ring-1 ring-gray-100">
-        <Mail className="h-12 w-12 text-gray-300" />
-        <p className="mt-4 text-sm font-medium text-gray-500">
-          メールがまだありません
-        </p>
-        <p className="mt-1 text-xs text-gray-400">
-          Googleアカウントを連携すると、就活メールが自動で表示されます
-        </p>
-      </div>
+      {hasEmails ? (
+        <div className="divide-y divide-gray-100 rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
+          {emails.map((email) => (
+            <div
+              key={email.id}
+              className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50"
+            >
+              <div
+                className={`mt-2 h-2 w-2 shrink-0 rounded-full ${
+                  email.is_read ? "bg-gray-300" : "bg-blue-500"
+                }`}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p
+                    className={`truncate text-sm ${
+                      email.is_read
+                        ? "text-gray-600"
+                        : "font-semibold text-gray-900"
+                    }`}
+                  >
+                    {email.subject}
+                  </p>
+                  {email.ai_category && (
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        categoryColors[email.ai_category] ?? categoryColors["その他"]
+                      }`}
+                    >
+                      {email.ai_category}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {email.from_name ?? email.from_address}
+                  <span className="mx-1">·</span>
+                  {new Date(email.received_at).toLocaleDateString("ja-JP")}
+                </p>
+                {email.snippet && (
+                  <p className="mt-1 truncate text-xs text-gray-400">
+                    {email.snippet}
+                  </p>
+                )}
+              </div>
+              {email.gmail_link && (
+                <a
+                  href={email.gmail_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 shrink-0 text-gray-400 hover:text-blue-500"
+                  title="Gmailで開く"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-xl bg-white py-16 shadow-sm ring-1 ring-gray-100">
+          <Mail className="h-12 w-12 text-gray-300" />
+          <p className="mt-4 text-sm font-medium text-gray-500">
+            メールがまだありません
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            ダッシュボードの「メール取得 & AI分析」ボタンを押してください
+          </p>
+        </div>
+      )}
     </div>
   );
 }
