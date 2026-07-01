@@ -43,7 +43,7 @@ export async function analyzeEmails(
     .join("\n\n");
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6-20250620",
+    model: "claude-sonnet-5",
     max_tokens: 2048,
     messages: [
       {
