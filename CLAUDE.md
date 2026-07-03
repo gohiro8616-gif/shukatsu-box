@@ -13,6 +13,7 @@ ShukatsuBox = Next.js + Supabase + Gmail API + Claude AIを使った就活管理
 
 **未解決の課題:**
 - `/api/analyze`（AI分析機能）で `invalid x-api-key` エラーが発生していた。新しいAnthropic APIキーを`.env.local`に設定し直したが、まだ動作確認できていない。次回はまず「メール取得 & AI分析」ボタンを押して、AI分析が正常に動くか確認すること。
+- `src/lib/ai-analyzer.ts`で使っていたモデルID `claude-sonnet-4-6-20250620` は実在しない値だったため `claude-sonnet-5` に修正済み。ただしこれは「invalid x-api-key」エラーとは別種の問題（モデルIDエラーは404系、APIキーエラーは401系）なので、x-api-keyエラー自体は引き続き`.env.local`の`ANTHROPIC_API_KEY`の値そのものを疑って確認すること。
 
 **開発環境:**
 - ユーザーはWindows PCでパワーシェルを使い、`npm run dev`でローカル起動して動作確認している
