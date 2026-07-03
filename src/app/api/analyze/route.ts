@@ -1,6 +1,33 @@
 import { NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
-import { analyzeEmails } from "@/lib/ai-analyzer";
+import { analyzeEmails, type EmailAnalysis } from "@/lib/ai-analyzer";
+
+/**
+ * Claude APIのエラーをユーザー向けの日本語メッセージに変換する
+ * どのエラーが起きたか分かるようにして、対処方法を案内する
+ */
+function toFriendlyAiError(err: unknown): string {
+  if (err instanceof Anthropic.APIError) {
+    if (err.status === 401) {
+      return "Anthropic APIキーが無効です。.env.localのANTHROPIC_API_KEYが正しいか確認し、サーバーを再起動してください。";
+    }
+    if (err.status === 404) {
+      return "AIモデルが見つかりません。モデルIDの設定を確認してください。";
+    }
+    if (err.status === 429) {
+      return "AIの利用制限に達しました。しばらく待ってから再度お試しください。";
+    }
+    if (err.status === 529) {
+      return "AIサーバーが混み合っています。しばらく待ってから再度お試しください。";
+    }
+    return `AI分析でエラーが発生しました（コード: ${err.status}）。`;
+  }
+  if (err instanceof Error && err.message.includes("ANTHROPIC_API_KEY")) {
+    return err.message;
+  }
+  return "AI分析で予期しないエラーが発生しました。";
+}
 
 /**
  * POST /api/analyze
@@ -41,15 +68,21 @@ export async function POST() {
   }
 
   // Claude AIで分析
-  const analysisMap = await analyzeEmails(
-    unanalyzed.map((e) => ({
-      id: e.id,
-      subject: e.subject,
-      fromAddress: e.from_address,
-      fromName: e.from_name,
-      snippet: e.snippet,
-    }))
-  );
+  let analysisMap: Map<string, EmailAnalysis>;
+  try {
+    analysisMap = await analyzeEmails(
+      unanalyzed.map((e) => ({
+        id: e.id,
+        subject: e.subject,
+        fromAddress: e.from_address,
+        fromName: e.from_name,
+        snippet: e.snippet,
+      }))
+    );
+  } catch (err) {
+    console.error("AI分析エラー:", err);
+    return NextResponse.json({ error: toFriendlyAiError(err) }, { status: 500 });
+  }
 
   let analyzedCount = 0;
   let companiesCreated = 0;

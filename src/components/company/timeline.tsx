@@ -11,7 +11,7 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   不合格: "bg-red-500",
 };
 
-export function Timeline({ events }: { events: any[] }) {
+export function Timeline({ events }: { events: TimelineEvent[] }) {
   if (events.length === 0) {
     return (
       <div className="mt-4 flex flex-col items-center py-6">
@@ -31,7 +31,7 @@ export function Timeline({ events }: { events: any[] }) {
   return (
     <div className="mt-4">
       <ol className="relative ml-3 border-l-2 border-gray-200">
-        {events.map((event, i) => (
+        {events.map((event) => (
           <li key={event.id} className="mb-6 ml-6 last:mb-0">
             <span
               className={`absolute -left-[9px] flex h-4 w-4 items-center justify-center rounded-full ring-4 ring-white ${

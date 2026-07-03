@@ -1,6 +1,5 @@
 import {
   Clock,
-  Building2,
   Mail,
   AlertTriangle,
   ChevronRight,

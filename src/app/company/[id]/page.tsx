@@ -9,6 +9,13 @@ import { getUser } from "@/lib/supabase/safe-auth";
 import { notFound } from "next/navigation";
 import { CompanyControls } from "@/components/company/company-controls";
 import { Timeline } from "@/components/company/timeline";
+import type { Company, Email, TimelineEvent } from "@/types";
+
+/** このページで表示するメールの項目（一覧表示に必要な分だけ取得） */
+type EmailListItem = Pick<
+  Email,
+  "id" | "subject" | "from_name" | "from_address" | "received_at" | "is_read" | "gmail_link" | "snippet"
+>;
 
 export default async function CompanyDetailPage({
   params,
@@ -18,9 +25,9 @@ export default async function CompanyDetailPage({
   const { id } = await params;
   const { supabase, user } = await getUser();
 
-  let company = null;
-  let timeline: any[] = [];
-  let emails: any[] = [];
+  let company: Company | null = null;
+  let timeline: TimelineEvent[] = [];
+  let emails: EmailListItem[] = [];
 
   if (user) {
     const { data } = await supabase
@@ -110,7 +117,7 @@ export default async function CompanyDetailPage({
             <div className="mt-4">
               {emails.length > 0 ? (
                 <ul className="space-y-3">
-                  {emails.map((email: any) => (
+                  {emails.map((email) => (
                     <li
                       key={email.id}
                       className="flex items-start gap-3 rounded-lg border border-gray-100 p-3 transition-colors hover:bg-gray-50"

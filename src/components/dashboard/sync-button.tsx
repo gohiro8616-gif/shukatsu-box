@@ -34,7 +34,9 @@ export function SyncButton() {
       const analyzeData = await analyzeRes.json();
 
       if (!analyzeRes.ok) {
-        setMessage(`メール${fetchData.imported}件取得済み。AI分析に失敗しました。`);
+        setMessage(
+          `メール${fetchData.imported}件取得済み。${analyzeData.error ?? "AI分析に失敗しました。"}`
+        );
         return;
       }
 

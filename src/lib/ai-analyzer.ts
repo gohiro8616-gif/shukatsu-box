@@ -1,8 +1,19 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+/**
+ * Anthropic APIクライアントを作成する
+ * モジュール読み込み時ではなく使用時に作成することで、
+ * APIキー未設定でもアプリ全体が起動できるようにする
+ */
+function createAnthropicClient(): Anthropic {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "ANTHROPIC_API_KEYが設定されていません。.env.localファイルを確認してください。"
+    );
+  }
+  return new Anthropic({ apiKey });
+}
 
 /** AIによるメール分析結果 */
 export interface EmailAnalysis {
@@ -41,6 +52,8 @@ export async function analyzeEmails(
         `【メール${i + 1}】ID: ${e.id}\n件名: ${e.subject}\n送信者: ${e.fromName ?? ""} <${e.fromAddress}>\n本文冒頭: ${e.snippet}`
     )
     .join("\n\n");
+
+  const anthropic = createAnthropicClient();
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-5",

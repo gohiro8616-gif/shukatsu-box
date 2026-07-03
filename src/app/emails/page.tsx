@@ -2,6 +2,13 @@ import { Mail, ExternalLink } from "lucide-react";
 import { Suspense } from "react";
 import { getUser } from "@/lib/supabase/safe-auth";
 import { EmailFilters } from "@/components/email/email-filters";
+import type { Email } from "@/types";
+
+/** このページで表示するメールの項目（一覧表示に必要な分だけ取得） */
+type EmailListItem = Pick<
+  Email,
+  "id" | "subject" | "from_name" | "from_address" | "snippet" | "received_at" | "is_read" | "ai_category" | "gmail_link" | "company_id"
+>;
 
 export default async function EmailsPage({
   searchParams,
@@ -11,7 +18,7 @@ export default async function EmailsPage({
   const params = await searchParams;
   const { supabase, user } = await getUser();
 
-  let emails: any[] | null = null;
+  let emails: EmailListItem[] | null = null;
 
   if (user) {
     let query = supabase
