@@ -1,4 +1,5 @@
 import { Mail, ExternalLink } from "lucide-react";
+import { Suspense } from "react";
 import { getUser } from "@/lib/supabase/safe-auth";
 import { EmailFilters } from "@/components/email/email-filters";
 
@@ -54,7 +55,9 @@ export default async function EmailsPage({
         </p>
       </div>
 
-      <EmailFilters />
+      <Suspense fallback={<div className="h-12 rounded-lg bg-gray-100 animate-pulse" />}>
+        <EmailFilters />
+      </Suspense>
 
       {hasEmails ? (
         <div className="divide-y divide-gray-100 rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
